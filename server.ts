@@ -24,6 +24,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Cookie Session - Stateless and perfect for Vercel Serverless
+app.set('trust proxy', 1); // Trust Vercel proxy
 app.use(cookieSession({
   name: 'voxmeet-session',
   keys: [process.env.SESSION_SECRET || "voxmeet-production-secret-key-2026"],
