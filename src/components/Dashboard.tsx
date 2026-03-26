@@ -43,14 +43,26 @@ export const Dashboard: React.FC = () => {
     fetchAuthStatus();
     
     const handleMessage = (event: MessageEvent) => {
+      console.log("DEBUG: Message received in Dashboard:", event.data);
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
         fetchAuthStatus();
       }
     };
     
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
+    
+    // Fallback: Poll for auth status every 5 seconds if not authenticated
+    const interval = setInterval(() => {
+      if (!authStatus.authenticated) {
+        fetchAuthStatus();
+      }
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      clearInterval(interval);
+    };
+  }, [authStatus.authenticated]);
 
   const handleConnect = async () => {
     const popup = window.open('about:blank', 'google_auth', 'width=600,height=700');
@@ -117,6 +129,14 @@ export const Dashboard: React.FC = () => {
             className="w-full py-3 bg-zinc-100 text-zinc-950 font-mono uppercase tracking-widest text-xs hover:bg-white transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             Authorize Google Access
+          </button>
+
+          <button 
+            onClick={fetchAuthStatus}
+            className="w-full mt-3 py-2 border border-zinc-800 text-zinc-500 font-mono uppercase tracking-widest text-[10px] hover:text-zinc-300 hover:border-zinc-600 transition-all flex items-center justify-center gap-2"
+          >
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+            Check Connection Status
           </button>
           
           <div className="mt-6 pt-6 border-t border-zinc-800">
