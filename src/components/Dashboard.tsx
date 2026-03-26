@@ -13,11 +13,14 @@ export const Dashboard: React.FC = () => {
   const fetchAuthStatus = async () => {
     try {
       const res = await fetch('/api/auth/status');
+      if (!res.ok) throw new Error("Network response was not ok");
       const data = await res.json();
       setAuthStatus(data);
       if (data.authenticated) fetchMeetings();
     } catch (err) {
       console.error("Failed to fetch auth status:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,38 +41,45 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchAuthStatus();
+    
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        fetchAuthStatus();
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
   }, []);
 
   const handleConnect = async () => {
-    // 1. Open popup immediately to avoid browser blocking
     const popup = window.open('about:blank', 'google_auth', 'width=600,height=700');
     if (!popup) {
-      alert("Pop-up blocked! Please allow popups for this site.");
+      alert("Pop-up blocked! Please allow popups for this site to connect your Google account.");
       return;
     }
-    popup.document.write("<p style='font-family:sans-serif;text-align:center;margin-top:50px;'>Connecting to Google...</p>");
+    
+    popup.document.write(`
+      <div style="font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #000; color: #fff;">
+        <div style="width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="margin-top: 20px; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;">Connecting to Google...</p>
+        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+      </div>
+    `);
 
     try {
-      // 2. Fetch the URL
       const res = await fetch('/api/auth/url');
-      if (!res.ok) throw new Error("Failed to get auth URL");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to get auth URL");
+      }
       
       const { url } = await res.json();
-      
-      // 3. Update popup location
       popup.location.href = url;
-      
-      const handleMessage = (event: MessageEvent) => {
-        if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-          fetchAuthStatus();
-          window.removeEventListener('message', handleMessage);
-        }
-      };
-      window.addEventListener('message', handleMessage);
     } catch (err) {
       console.error("Auth error:", err);
       popup.close();
-      alert("Error connecting to server. Check if the API is running.");
+      alert(`Connection Error: ${err instanceof Error ? err.message : "Could not reach the server"}. Please check your internet connection and try again.`);
     }
   };
 
