@@ -1,23 +1,17 @@
 import express from "express";
 import { google } from "googleapis";
-import session from "express-session";
+import cookieSession from "cookie-session";
 import cookieParser from "cookie-parser";
 import path from "path";
 import helmet from "helmet";
 import cors from "cors";
-
-declare module "express-session" {
-  interface SessionData {
-    tokens: any;
-  }
-}
 
 const app = express();
 const PORT = 3000;
 
 // Security Middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP to allow Gemini Live API and Google Fonts
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
 
@@ -29,18 +23,14 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// Session Configuration optimized for Serverless/Vercel
-app.use(session({
-  secret: process.env.SESSION_SECRET || "voxmeet-production-secret-key-2026",
-  resave: false,
-  saveUninitialized: false, // Don't create session until something is stored
-  name: 'voxmeet.sid',
-  cookie: { 
-    secure: true, // Required for SameSite=None
-    sameSite: 'none', // Required for cross-origin iframe (AI Studio/Vercel)
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+// Cookie Session - Stateless and perfect for Vercel Serverless
+app.use(cookieSession({
+  name: 'voxmeet-session',
+  keys: [process.env.SESSION_SECRET || "voxmeet-production-secret-key-2026"],
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  secure: true,
+  sameSite: 'none',
+  httpOnly: true,
 }));
 
 // Google OAuth Setup
@@ -105,32 +95,27 @@ app.get("/auth/callback", async (req, res) => {
   const client = getOAuthClient();
   try {
     const { tokens } = await client.getToken(code as string);
+    // @ts-ignore - cookie-session uses req.session directly
     req.session.tokens = tokens;
     
-    req.session.save((err) => {
-      if (err) {
-        console.error("Session save error:", err);
-        return res.status(500).send("Session save failed");
-      }
-      res.send(`
-        <html>
-          <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #000; color: #fff;">
-            <script>
-              if (window.opener) {
-                window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
-                window.close();
-              } else {
-                window.location.href = '/';
-              }
-            </script>
-            <div style="text-align: center;">
-              <h2>Authenticated Successfully!</h2>
-              <p>Closing this window...</p>
-            </div>
-          </body>
-        </html>
-      `);
-    });
+    res.send(`
+      <html>
+        <body style="font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; background: #000; color: #fff;">
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS' }, '*');
+              window.close();
+            } else {
+              window.location.href = '/';
+            }
+          </script>
+          <div style="text-align: center;">
+            <h2>Authenticated Successfully!</h2>
+            <p>Closing this window...</p>
+          </div>
+        </body>
+      </html>
+    `);
   } catch (error) {
     console.error("Auth callback error:", error);
     res.status(500).send("Authentication failed. Please check server logs.");
@@ -139,16 +124,19 @@ app.get("/auth/callback", async (req, res) => {
 
 app.get("/api/auth/status", (req, res) => {
   res.json({ 
-    authenticated: !!req.session.tokens,
+    // @ts-ignore
+    authenticated: !!(req.session && req.session.tokens),
     configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
   });
 });
 
 // Calendar API
 app.get("/api/meetings", async (req, res) => {
-  if (!req.session.tokens) return res.status(401).json({ error: "Not authenticated" });
+  // @ts-ignore
+  if (!req.session || !req.session.tokens) return res.status(401).json({ error: "Not authenticated" });
   
   const client = getOAuthClient();
+  // @ts-ignore
   client.setCredentials(req.session.tokens);
   const calendar = google.calendar({ version: 'v3', auth: client });
   
@@ -169,12 +157,14 @@ app.get("/api/meetings", async (req, res) => {
 
 // Summary API
 app.post("/api/summary", async (req, res) => {
-  if (!req.session.tokens) return res.status(401).json({ error: "Not authenticated" });
+  // @ts-ignore
+  if (!req.session || !req.session.tokens) return res.status(401).json({ error: "Not authenticated" });
   
   const { title, content } = req.body;
   if (!title || !content) return res.status(400).json({ error: "Missing title or content" });
 
   const client = getOAuthClient();
+  // @ts-ignore
   client.setCredentials(req.session.tokens);
   
   const docs = google.docs({ version: 'v1', auth: client });
