@@ -41,16 +41,36 @@ export const Dashboard: React.FC = () => {
   }, []);
 
   const handleConnect = async () => {
-    const res = await fetch('/api/auth/url');
-    const { url } = await res.json();
-    const popup = window.open(url, 'google_auth', 'width=600,height=700');
-    
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        fetchAuthStatus();
-      }
-    };
-    window.addEventListener('message', handleMessage);
+    // 1. Open popup immediately to avoid browser blocking
+    const popup = window.open('about:blank', 'google_auth', 'width=600,height=700');
+    if (!popup) {
+      alert("Pop-up blocked! Please allow popups for this site.");
+      return;
+    }
+    popup.document.write("<p style='font-family:sans-serif;text-align:center;margin-top:50px;'>Connecting to Google...</p>");
+
+    try {
+      // 2. Fetch the URL
+      const res = await fetch('/api/auth/url');
+      if (!res.ok) throw new Error("Failed to get auth URL");
+      
+      const { url } = await res.json();
+      
+      // 3. Update popup location
+      popup.location.href = url;
+      
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+          fetchAuthStatus();
+          window.removeEventListener('message', handleMessage);
+        }
+      };
+      window.addEventListener('message', handleMessage);
+    } catch (err) {
+      console.error("Auth error:", err);
+      popup.close();
+      alert("Error connecting to server. Check if the API is running.");
+    }
   };
 
   if (!authStatus.authenticated) {

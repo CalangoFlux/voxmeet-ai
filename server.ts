@@ -172,6 +172,10 @@ async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
+    
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`VoxMeet Dev Server running on http://localhost:${PORT}`);
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
@@ -179,10 +183,12 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`VoxMeet Server running on http://localhost:${PORT}`);
-  });
 }
 
-startServer();
+// Export for Vercel
+export default app;
+
+// Only start the server if not running as a serverless function
+if (process.env.NODE_ENV !== "production") {
+  startServer();
+}
