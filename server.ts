@@ -188,6 +188,15 @@ async function startServer() {
 // Export for Vercel
 export default app;
 
+// Production static serving
+if (process.env.NODE_ENV === "production") {
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
 // Only start the server if not running as a serverless function
 if (process.env.NODE_ENV !== "production") {
   startServer();
