@@ -1,0 +1,7 @@
+{
+  "name": "VoxMeet AI",
+  "description": "Real-time meeting translator and assistant. Joins Google Meet, translates speech, and generates automated summaries in Google Drive.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
