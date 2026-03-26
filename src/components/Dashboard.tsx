@@ -70,8 +70,15 @@ export const Dashboard: React.FC = () => {
     try {
       const res = await fetch('/api/auth/url');
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to get auth URL");
+        const text = await res.text();
+        let errorMessage = "Failed to get auth URL";
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          errorMessage = `Server Error (${res.status}): ${text.substring(0, 100)}`;
+        }
+        throw new Error(errorMessage);
       }
       
       const { url } = await res.json();

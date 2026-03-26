@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import { google } from "googleapis";
 import session from "express-session";
 import cookieParser from "cookie-parser";
@@ -48,11 +47,17 @@ app.use(session({
 const getOAuthClient = () => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = `${process.env.APP_URL}/auth/callback`;
+  const appUrl = process.env.APP_URL;
 
   if (!clientId || !clientSecret) {
-    console.error("CRITICAL: Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET");
+    throw new Error("Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET environment variables.");
   }
+  
+  if (!appUrl) {
+    throw new Error("Missing APP_URL environment variable.");
+  }
+
+  const redirectUri = `${appUrl.replace(/\/$/, '')}/auth/callback`;
 
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 };
@@ -209,6 +214,7 @@ app.post("/api/summary", async (req, res) => {
 // Vite Setup for Development
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
