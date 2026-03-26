@@ -58,6 +58,7 @@ const getOAuthClient = () => {
   }
 
   const redirectUri = `${appUrl.replace(/\/$/, '')}/auth/callback`;
+  console.log("DEBUG: Generated Redirect URI:", redirectUri);
 
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 };
