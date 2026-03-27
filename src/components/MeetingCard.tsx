@@ -36,23 +36,23 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onJoin }) => 
           )}
         </div>
         
-        <div className="flex gap-2">
-          {meeting.hangoutLink && (
-            <button 
-              onClick={() => onJoin(meeting)}
-              className="px-3 py-1.5 bg-zinc-100 text-zinc-950 text-[11px] font-mono uppercase tracking-tighter hover:bg-white transition-colors flex items-center gap-1.5 cursor-pointer"
-            >
-              <Video size={12} /> Iniciar Assistente
-            </button>
-          )}
-          <a 
-            href={meeting.hangoutLink} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="p-1.5 border border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-all"
+        <div className="flex flex-col gap-2 min-w-[140px]">
+          <button 
+            onClick={() => onJoin(meeting)}
+            className="w-full px-4 py-2 bg-zinc-100 text-zinc-950 text-[11px] font-mono uppercase tracking-widest hover:bg-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-white/5"
           >
-            <ExternalLink size={12} />
-          </a>
+            <Video size={14} /> Conectar Bot
+          </button>
+          {meeting.hangoutLink && (
+            <a 
+              href={meeting.hangoutLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full px-4 py-1.5 border border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition-all text-[9px] font-mono uppercase tracking-widest flex items-center justify-center gap-2"
+            >
+              <ExternalLink size={10} /> Link do Meet
+            </a>
+          )}
         </div>
       </div>
     </div>

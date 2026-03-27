@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Meeting, AuthStatus, HistoryItem } from '../types';
 import { MeetingCard } from './MeetingCard';
 import { LiveTranslator } from './LiveTranslator';
-import { LayoutGrid, List, Settings, LogOut, ShieldCheck, RefreshCw, Info, X, History, FileText, Table, ExternalLink, CheckCircle2, AlertCircle, User } from 'lucide-react';
+import { LayoutGrid, List, Settings, LogOut, ShieldCheck, RefreshCw, Info, X, History, FileText, Table, ExternalLink, AlertCircle, User, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const Dashboard: React.FC = () => {
@@ -15,6 +15,21 @@ export const Dashboard: React.FC = () => {
   const [showLicense, setShowLicense] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [joinUrl, setJoinUrl] = useState('');
+
+  const handleManualJoin = () => {
+    if (!joinUrl) return;
+    const manualMeeting: Meeting = {
+      id: `manual-${Date.now()}`,
+      summary: 'Reunião via Link',
+      description: 'Conectado manualmente via URL',
+      start: { dateTime: new Date().toISOString() },
+      end: { dateTime: new Date(Date.now() + 3600000).toISOString() },
+      hangoutLink: joinUrl
+    };
+    setActiveMeeting(manualMeeting);
+    setJoinUrl('');
+  };
 
   const fetchAuthStatus = async () => {
     try {
@@ -254,6 +269,17 @@ SOFTWARE.`}
             <List size={20} />
           </button>
           <button 
+            onClick={() => {
+              const el = document.getElementById('meeting-link-input');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+              el?.focus();
+            }}
+            title="Link Manual"
+            className="p-2 text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors pointer-events-auto"
+          >
+            <ExternalLink size={20} />
+          </button>
+          <button 
             onClick={() => setShowSettings(true)}
             title="Configurações"
             className="p-2 text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors pointer-events-auto"
@@ -286,8 +312,8 @@ SOFTWARE.`}
                 <h2 className="text-xs font-mono uppercase tracking-[0.2em] text-zinc-500">Painel de Controle</h2>
                 <span className="h-4 w-[1px] bg-zinc-800" />
                 <div className="flex items-center gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-mono text-zinc-400 uppercase">Sistema Pronto</span>
+                  <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">Online</span>
                 </div>
                 {authStatus.user && (
                   <>
@@ -302,11 +328,11 @@ SOFTWARE.`}
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3 px-3 py-1 border border-zinc-800 bg-zinc-900/40">
                   <div className="flex items-center gap-1.5">
-                    <CheckCircle2 size={10} className="text-emerald-500" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     <span className="text-[9px] font-mono text-zinc-500 uppercase">Meet</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <CheckCircle2 size={10} className="text-emerald-500" />
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                     <span className="text-[9px] font-mono text-zinc-500 uppercase">Drive</span>
                   </div>
                 </div>
@@ -323,44 +349,86 @@ SOFTWARE.`}
               <div className="max-w-5xl mx-auto py-12 px-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                   {/* Left: Meetings */}
-                  <div className="lg:col-span-2">
-                    <div className="mb-8">
-                      <h1 className="text-4xl font-serif italic text-zinc-100 mb-4">Próximas Reuniões</h1>
-                      <p className="text-zinc-500 text-sm leading-relaxed">
-                        Selecione uma reunião para iniciar o Assistente VoxMeet. O bot entrará na 
-                        sessão do Google Meet e fornecerá tradução em tempo real.
-                      </p>
+                  <div className="lg:col-span-2 space-y-8">
+                    {/* Link da Reunião Section */}
+                    <div className="p-8 border border-zinc-800 bg-zinc-900/40 shadow-2xl shadow-emerald-500/5">
+                      <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-[11px] font-mono uppercase tracking-[0.2em] text-zinc-100 flex items-center gap-2">
+                          <Video size={16} className="text-emerald-500" /> Link da Reunião
+                        </h3>
+                        <span className="text-[9px] font-mono text-zinc-600 uppercase tracking-widest">Conexão Instantânea</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <input 
+                          id="meeting-link-input"
+                          type="text" 
+                          placeholder="Cole o link do Google Meet aqui (ex: meet.google.com/abc-defg-hij)"
+                          value={joinUrl}
+                          onChange={(e) => setJoinUrl(e.target.value)}
+                          className="flex-1 bg-zinc-950 border border-zinc-800 p-4 text-xs text-zinc-300 focus:outline-none focus:border-emerald-500/50 font-mono transition-all"
+                        />
+                        <button 
+                          onClick={handleManualJoin}
+                          disabled={!joinUrl}
+                          className="px-8 py-4 bg-zinc-100 text-zinc-950 font-mono uppercase tracking-widest text-xs hover:bg-white transition-all disabled:opacity-50 cursor-pointer shadow-lg shadow-white/10"
+                        >
+                          Conectar Bot
+                        </button>
+                      </div>
+                      <div className="mt-4 flex items-center gap-2 text-[10px] font-mono text-zinc-500 uppercase tracking-tighter">
+                        <Info size={12} className="text-zinc-700" />
+                        <span>O assistente entrará na reunião para traduzir e transcrever em tempo real.</span>
+                      </div>
                     </div>
 
-                    <div className="border border-zinc-800 bg-zinc-900/10">
-                      {viewMode === 'grid' ? (
-                        <div className="grid grid-cols-[40px_1.5fr_1fr_1fr] p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-                          <div />
-                          <div>Detalhes do Evento</div>
-                          <div>Horário</div>
-                          <div className="text-right">Ações</div>
-                        </div>
-                      ) : (
-                        <div className="p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-                          Modo Lista
-                        </div>
-                      )}
-                      
-                      {loading ? (
-                        <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
-                          Sincronizando Calendário...
-                        </div>
-                      ) : meetings.length > 0 ? (
-                        <div className={viewMode === 'list' ? 'flex flex-col' : ''}>
-                          {meetings.map(m => (
-                            <MeetingCard key={m.id} meeting={m} onJoin={setActiveMeeting} />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
-                          Nenhuma reunião encontrada.
-                        </div>
-                      )}
+                    <div>
+                      <div className="mb-8">
+                        <h1 className="text-4xl font-serif italic text-zinc-100 mb-4">Próximas Reuniões</h1>
+                        <p className="text-zinc-500 text-sm leading-relaxed">
+                          Selecione uma reunião do seu calendário para iniciar o Assistente VoxMeet.
+                        </p>
+                      </div>
+
+                      <div className="border border-zinc-800 bg-zinc-900/10">
+                        {viewMode === 'grid' ? (
+                          <div className="grid grid-cols-[40px_1.5fr_1fr_1fr] p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+                            <div />
+                            <div>Detalhes do Evento</div>
+                            <div>Horário</div>
+                            <div className="text-right">Ações</div>
+                          </div>
+                        ) : (
+                          <div className="p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+                            Modo Lista
+                          </div>
+                        )}
+                        
+                        {loading ? (
+                          <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
+                            Sincronizando Calendário...
+                          </div>
+                        ) : meetings.length > 0 ? (
+                          <div className={viewMode === 'list' ? 'flex flex-col' : ''}>
+                            {meetings.map(m => (
+                              <MeetingCard key={m.id} meeting={m} onJoin={setActiveMeeting} />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-16 text-center space-y-4">
+                            <p className="text-zinc-600 font-mono text-xs uppercase tracking-widest">Nenhuma reunião encontrada no calendário.</p>
+                            <button 
+                              onClick={() => {
+                                const el = document.getElementById('meeting-link-input');
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                el?.focus();
+                              }}
+                              className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest hover:text-emerald-400 underline"
+                            >
+                              Usar Link Manual
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -398,6 +466,35 @@ SOFTWARE.`}
                       </div>
                     </div>
 
+                    <div className="p-8 border border-zinc-800 bg-zinc-900/40">
+                      <h3 className="text-[11px] font-mono uppercase tracking-widest text-zinc-400 mb-6 flex items-center gap-2">
+                        <Info size={16} className="text-blue-500" /> Guia de Uso
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="space-y-3">
+                          <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-mono text-zinc-100">01</div>
+                          <h4 className="text-[10px] font-mono uppercase text-zinc-200">Conectar</h4>
+                          <p className="text-[10px] text-zinc-500 leading-relaxed">
+                            Cole o link do Google Meet ou selecione uma reunião do calendário.
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-mono text-zinc-100">02</div>
+                          <h4 className="text-[10px] font-mono uppercase text-zinc-200">Ativar Bot</h4>
+                          <p className="text-[10px] text-zinc-500 leading-relaxed">
+                            Clique em "Conectar Bot". O assistente abrirá a interface de tradução.
+                          </p>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="h-8 w-8 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-mono text-zinc-100">03</div>
+                          <h4 className="text-[10px] font-mono uppercase text-zinc-200">Traduzir</h4>
+                          <p className="text-[10px] text-zinc-500 leading-relaxed">
+                            O VoxMeet traduzirá o áudio da reunião em tempo real para você.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="p-6 border border-zinc-800 bg-zinc-900/40">
                       <h3 className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
                         <ShieldCheck size={14} /> Google Drive
@@ -406,7 +503,7 @@ SOFTWARE.`}
                         Todos os seus resumos e transcrições são salvos automaticamente na pasta <span className="text-zinc-300">"VoxMeet AI"</span> no seu Drive.
                       </p>
                       <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-500/70">
-                        <CheckCircle2 size={12} />
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                         <span>Pasta Gerada Automaticamente</span>
                       </div>
                     </div>

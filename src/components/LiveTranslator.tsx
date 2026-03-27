@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
 import { Meeting } from '../types';
-import { Mic, MicOff, Video, Save, X, Activity, MessageSquare, Languages, FileText, Table } from 'lucide-react';
+import { Mic, MicOff, Video, Save, X, Activity, MessageSquare, Languages, FileText, Table, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -13,9 +13,10 @@ interface LiveTranslatorProps {
 export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState<{ text: string; translation: string; timestamp: string }[]>([]);
-  const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'saving'>('idle');
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'saving' | 'saved'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolume] = useState(0);
+  const [saveType, setSaveType] = useState<'doc' | 'sheet' | null>(null);
   
   const sessionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -156,7 +157,12 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
         body: JSON.stringify({ title: meeting.summary, content, type })
       });
       if (res.ok) {
-        alert(`Resumo salvo no Google Drive como ${type === 'doc' ? 'Documento' : 'Planilha'}!`);
+        setSaveType(type);
+        setStatus('saved');
+        setTimeout(() => {
+          setStatus('active');
+          setSaveType(null);
+        }, 3000);
       }
     } catch (err) {
       console.error(err);
@@ -177,11 +183,33 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
               <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Sessão Ativa</span>
               <span className="h-1 w-1 rounded-full bg-zinc-700" />
               <span className="text-[10px] font-mono text-emerald-500 uppercase">Ao Vivo</span>
+              {meeting.hangoutLink && (
+                <>
+                  <span className="h-1 w-1 rounded-full bg-zinc-800" />
+                  <a 
+                    href={meeting.hangoutLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-mono uppercase tracking-widest text-blue-500 hover:text-blue-400 underline flex items-center gap-1"
+                  >
+                    Abrir Meet <ExternalLink size={10} />
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>
         
         <div className="flex gap-3">
+          {status === 'saved' && (
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-mono uppercase tracking-widest"
+            >
+              <CheckCircle2 size={12} /> {saveType === 'doc' ? 'Doc' : 'Sheet'} Salvo
+            </motion.div>
+          )}
           <div className="flex border border-zinc-800">
             <button 
               onClick={() => saveSummary('doc')}

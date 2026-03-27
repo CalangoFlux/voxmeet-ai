@@ -114,8 +114,8 @@ app.get("/auth/callback", async (req, res) => {
             }
           </script>
           <div style="text-align: center;">
-            <h2 style="font-weight: 300; letter-spacing: 0.05em; text-transform: uppercase;">Autenticado com Sucesso!</h2>
-            <p style="opacity: 0.6; font-size: 12px;">Fechando esta janela...</p>
+            <h2 style="font-weight: 300; letter-spacing: 0.1em; text-transform: uppercase; font-size: 14px;">Conexão Estabelecida</h2>
+            <p style="opacity: 0.4; font-size: 10px; letter-spacing: 0.05em; margin-top: 8px;">Esta janela será fechada automaticamente.</p>
           </div>
         </body>
       </html>
