@@ -170,13 +170,13 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
       {/* Header */}
       <header className="h-16 border-b border-zinc-800 flex items-center justify-between px-8 bg-zinc-900/10 backdrop-blur-md">
         <div className="flex items-center gap-4">
-          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-100"><X size={18} /></button>
+          <button onClick={onClose} className="p-2 text-zinc-500 hover:text-zinc-100 cursor-pointer"><X size={18} /></button>
           <div className="flex flex-col">
             <h2 className="text-sm font-medium text-zinc-100">{meeting.summary}</h2>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Active Session</span>
+              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Sessão Ativa</span>
               <span className="h-1 w-1 rounded-full bg-zinc-700" />
-              <span className="text-[10px] font-mono text-emerald-500 uppercase">Live</span>
+              <span className="text-[10px] font-mono text-emerald-500 uppercase">Ao Vivo</span>
             </div>
           </div>
         </div>
@@ -185,21 +185,21 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
           <button 
             onClick={saveSummary}
             disabled={status === 'saving' || transcript.length === 0}
-            className="px-4 py-1.5 border border-zinc-800 text-[11px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white hover:border-zinc-600 transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-1.5 border border-zinc-800 text-[11px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white hover:border-zinc-600 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
           >
-            <Save size={14} /> {status === 'saving' ? 'Saving...' : 'Save Summary'}
+            <Save size={14} /> {status === 'saving' ? 'Salvando...' : 'Salvar Resumo'}
           </button>
           <button 
             onClick={isRecording ? stopSession : startSession}
             className={cn(
-              "px-4 py-1.5 text-[11px] font-mono uppercase tracking-widest transition-all flex items-center gap-2",
+              "px-4 py-1.5 text-[11px] font-mono uppercase tracking-widest transition-all flex items-center gap-2 cursor-pointer",
               isRecording 
                 ? "bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20" 
                 : "bg-zinc-100 text-zinc-950 hover:bg-white"
             )}
           >
             {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
-            {isRecording ? 'Stop Bot' : 'Start Bot'}
+            {isRecording ? 'Parar Bot' : 'Iniciar Bot'}
           </button>
         </div>
       </header>
@@ -223,7 +223,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
                   <div className="flex-1 border-l border-zinc-800 pl-6 pb-6">
                     <div className="flex items-center gap-2 mb-2">
                       <Languages size={12} className="text-zinc-500" />
-                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Translation</span>
+                      <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Tradução</span>
                     </div>
                     <p className="text-lg font-serif italic text-zinc-100 leading-relaxed">
                       "{item.translation}"
@@ -237,9 +237,9 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
                 <div className="h-16 w-16 rounded-full border border-dashed border-zinc-800 flex items-center justify-center mb-6">
                   <Activity className="text-zinc-700" />
                 </div>
-                <h3 className="text-sm font-mono uppercase tracking-widest text-zinc-500 mb-2">Awaiting Input</h3>
+                <h3 className="text-sm font-mono uppercase tracking-widest text-zinc-500 mb-2">Aguardando Áudio</h3>
                 <p className="text-xs text-zinc-600 max-w-xs">
-                  The VoxMeet bot is listening. Start speaking or join the Google Meet call to begin real-time translation.
+                  O assistente VoxMeet está ouvindo. Comece a falar ou entre na chamada do Google Meet para iniciar a tradução em tempo real.
                 </p>
               </div>
             )}
@@ -250,7 +250,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <div className={cn("h-1.5 w-1.5 rounded-full", isRecording ? "bg-emerald-500 animate-pulse" : "bg-zinc-700")} />
-                <span className="text-[10px] font-mono uppercase text-zinc-500">Mic Status</span>
+                <span className="text-[10px] font-mono uppercase text-zinc-500">Status do Mic</span>
               </div>
               
               {isRecording && (
@@ -269,7 +269,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
 
               <div className="flex items-center gap-2">
                 <Activity size={12} className="text-zinc-600" />
-                <span className="text-[10px] font-mono uppercase text-zinc-500">Latency: 120ms</span>
+                <span className="text-[10px] font-mono uppercase text-zinc-500">Latência: 120ms</span>
               </div>
             </div>
             {error && <span className="text-[10px] font-mono uppercase text-red-500">{error}</span>}
@@ -280,15 +280,15 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
         <aside className="w-80 bg-zinc-900/10 p-8 hidden lg:block">
           <div className="mb-10">
             <h4 className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 mb-4 flex items-center gap-2">
-              <FileText size={12} /> Meeting Context
+              <FileText size={12} /> Contexto da Reunião
             </h4>
             <div className="space-y-4">
               <div>
-                <label className="text-[10px] font-mono uppercase text-zinc-700 block mb-1">Subject</label>
+                <label className="text-[10px] font-mono uppercase text-zinc-700 block mb-1">Assunto</label>
                 <p className="text-xs text-zinc-300">{meeting.summary}</p>
               </div>
               <div>
-                <label className="text-[10px] font-mono uppercase text-zinc-700 block mb-1">Target Languages</label>
+                <label className="text-[10px] font-mono uppercase text-zinc-700 block mb-1">Idiomas Alvo</label>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {['PT-BR', 'EN', 'ES'].map(lang => (
                     <span key={lang} className="px-2 py-0.5 border border-zinc-800 text-[9px] font-mono text-zinc-500 uppercase">{lang}</span>
@@ -300,11 +300,11 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
 
           <div className="p-4 border border-zinc-800 bg-zinc-900/40">
             <h4 className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 mb-3 flex items-center gap-2">
-              <MessageSquare size={12} /> Bot Instructions
+              <MessageSquare size={12} /> Instruções do Bot
             </h4>
             <p className="text-[10px] text-zinc-500 leading-relaxed italic">
-              "Translate all non-English speech to English. Translate English speech to Portuguese. 
-              Focus on technical accuracy and maintain a professional tone."
+              "Traduza todas as falas não inglesas para o inglês. Traduza as falas em inglês para o português. 
+              Foque na precisão técnica e mantenha um tom profissional."
             </p>
           </div>
         </aside>

@@ -40,9 +40,9 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onJoin }) => 
           {meeting.hangoutLink && (
             <button 
               onClick={() => onJoin(meeting)}
-              className="px-3 py-1.5 bg-zinc-100 text-zinc-950 text-[11px] font-mono uppercase tracking-tighter hover:bg-white transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-zinc-100 text-zinc-950 text-[11px] font-mono uppercase tracking-tighter hover:bg-white transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              <Video size={12} /> Launch Bot
+              <Video size={12} /> Iniciar Assistente
             </button>
           )}
           <a 
