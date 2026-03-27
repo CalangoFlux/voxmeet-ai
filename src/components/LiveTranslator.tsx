@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
 import { Meeting } from '../types';
-import { Mic, MicOff, Video, Save, X, Activity, MessageSquare, Languages, FileText } from 'lucide-react';
+import { Mic, MicOff, Video, Save, X, Activity, MessageSquare, Languages, FileText, Table } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -139,7 +139,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
     setStatus('idle');
   };
 
-  const saveSummary = async () => {
+  const saveSummary = async (type: 'doc' | 'sheet' = 'doc') => {
     setStatus('saving');
     const content = `
       RESUMO DA REUNIÃO: ${meeting.summary}
@@ -153,10 +153,10 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
       const res = await fetch('/api/summary', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: meeting.summary, content })
+        body: JSON.stringify({ title: meeting.summary, content, type })
       });
       if (res.ok) {
-        alert("Resumo salvo no Google Drive!");
+        alert(`Resumo salvo no Google Drive como ${type === 'doc' ? 'Documento' : 'Planilha'}!`);
       }
     } catch (err) {
       console.error(err);
@@ -182,13 +182,24 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
         </div>
         
         <div className="flex gap-3">
-          <button 
-            onClick={saveSummary}
-            disabled={status === 'saving' || transcript.length === 0}
-            className="px-4 py-1.5 border border-zinc-800 text-[11px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white hover:border-zinc-600 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-          >
-            <Save size={14} /> {status === 'saving' ? 'Salvando...' : 'Salvar Resumo'}
-          </button>
+          <div className="flex border border-zinc-800">
+            <button 
+              onClick={() => saveSummary('doc')}
+              disabled={status === 'saving' || transcript.length === 0}
+              title="Salvar como Documento"
+              className="px-3 py-1.5 border-r border-zinc-800 text-[11px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <FileText size={14} /> {status === 'saving' ? '...' : 'DOC'}
+            </button>
+            <button 
+              onClick={() => saveSummary('sheet')}
+              disabled={status === 'saving' || transcript.length === 0}
+              title="Salvar como Planilha"
+              className="px-3 py-1.5 text-[11px] font-mono uppercase tracking-widest text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <Table size={14} /> {status === 'saving' ? '...' : 'SHEET'}
+            </button>
+          </div>
           <button 
             onClick={isRecording ? stopSession : startSession}
             className={cn(

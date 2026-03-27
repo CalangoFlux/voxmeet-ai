@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Meeting, AuthStatus } from '../types';
+import { Meeting, AuthStatus, HistoryItem } from '../types';
 import { MeetingCard } from './MeetingCard';
 import { LiveTranslator } from './LiveTranslator';
-import { LayoutGrid, List, Settings, LogOut, ShieldCheck, RefreshCw, Info, X } from 'lucide-react';
+import { LayoutGrid, List, Settings, LogOut, ShieldCheck, RefreshCw, Info, X, History, FileText, Table, ExternalLink, CheckCircle2, AlertCircle, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const Dashboard: React.FC = () => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [activeMeeting, setActiveMeeting] = useState<Meeting | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus & { configured?: boolean }>({ authenticated: false, configured: true });
   const [showLicense, setShowLicense] = useState(false);
@@ -20,7 +22,10 @@ export const Dashboard: React.FC = () => {
       if (!res.ok) throw new Error(`Status check failed: ${res.status}`);
       const data = await res.json();
       setAuthStatus(data);
-      if (data.authenticated) fetchMeetings();
+      if (data.authenticated) {
+        fetchMeetings();
+        fetchHistory();
+      }
     } catch (err) {
       console.error("Error fetching auth status:", err);
     } finally {
@@ -40,6 +45,21 @@ export const Dashboard: React.FC = () => {
       console.error("Error fetching meetings:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHistory = async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch('/api/history');
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data);
+      }
+    } catch (err) {
+      console.error("Error fetching history:", err);
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -269,54 +289,128 @@ SOFTWARE.`}
                   <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span className="text-[10px] font-mono text-zinc-400 uppercase">Sistema Pronto</span>
                 </div>
+                {authStatus.user && (
+                  <>
+                    <span className="h-4 w-[1px] bg-zinc-800" />
+                    <div className="flex items-center gap-2">
+                      <img src={authStatus.user.picture} alt="" className="h-5 w-5 rounded-full border border-zinc-700" referrerPolicy="no-referrer" />
+                      <span className="text-[10px] font-mono text-zinc-400 uppercase">{authStatus.user.name}</span>
+                    </div>
+                  </>
+                )}
               </div>
-              <button 
-                onClick={() => fetchMeetings()}
-                className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors cursor-pointer"
-              >
-                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-              </button>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 px-3 py-1 border border-zinc-800 bg-zinc-900/40">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={10} className="text-emerald-500" />
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase">Meet</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 size={10} className="text-emerald-500" />
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase">Drive</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => { fetchMeetings(); fetchHistory(); }}
+                  className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors cursor-pointer"
+                >
+                  <RefreshCw size={16} className={loading || historyLoading ? 'animate-spin' : ''} />
+                </button>
+              </div>
             </header>
 
             <div className="flex-1 overflow-y-auto">
-              <div className="max-w-4xl mx-auto py-12 px-8">
-                <div className="mb-12">
-                  <h1 className="text-4xl font-serif italic text-zinc-100 mb-4">Próximas Reuniões</h1>
-                  <p className="text-zinc-500 max-w-xl text-sm leading-relaxed">
-                    Selecione uma reunião para iniciar o Assistente VoxMeet. O bot entrará na 
-                    sessão do Google Meet e fornecerá tradução em tempo real para todos os participantes.
-                  </p>
-                </div>
+              <div className="max-w-5xl mx-auto py-12 px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                  {/* Left: Meetings */}
+                  <div className="lg:col-span-2">
+                    <div className="mb-8">
+                      <h1 className="text-4xl font-serif italic text-zinc-100 mb-4">Próximas Reuniões</h1>
+                      <p className="text-zinc-500 text-sm leading-relaxed">
+                        Selecione uma reunião para iniciar o Assistente VoxMeet. O bot entrará na 
+                        sessão do Google Meet e fornecerá tradução em tempo real.
+                      </p>
+                    </div>
 
-                <div className="border border-zinc-800 bg-zinc-900/10">
-                  {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-[40px_1.5fr_1fr_1fr] p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-                      <div />
-                      <div>Detalhes do Evento</div>
-                      <div>Horário</div>
-                      <div className="text-right">Ações</div>
+                    <div className="border border-zinc-800 bg-zinc-900/10">
+                      {viewMode === 'grid' ? (
+                        <div className="grid grid-cols-[40px_1.5fr_1fr_1fr] p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+                          <div />
+                          <div>Detalhes do Evento</div>
+                          <div>Horário</div>
+                          <div className="text-right">Ações</div>
+                        </div>
+                      ) : (
+                        <div className="p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+                          Modo Lista
+                        </div>
+                      )}
+                      
+                      {loading ? (
+                        <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
+                          Sincronizando Calendário...
+                        </div>
+                      ) : meetings.length > 0 ? (
+                        <div className={viewMode === 'list' ? 'flex flex-col' : ''}>
+                          {meetings.map(m => (
+                            <MeetingCard key={m.id} meeting={m} onJoin={setActiveMeeting} />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
+                          Nenhuma reunião encontrada.
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-                      Modo Lista
+                  </div>
+
+                  {/* Right: History & Drive */}
+                  <div className="space-y-8">
+                    <div>
+                      <h3 className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
+                        <History size={14} /> Histórico Recente
+                      </h3>
+                      <div className="border border-zinc-800 bg-zinc-900/10 divide-y divide-zinc-800">
+                        {historyLoading ? (
+                          <div className="p-8 text-center text-zinc-700 font-mono text-[10px] uppercase">Carregando...</div>
+                        ) : history.length > 0 ? (
+                          history.map(item => (
+                            <div key={item.id} className="p-4 hover:bg-zinc-900/50 transition-all group">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex gap-3">
+                                  <div className="mt-1">
+                                    {item.type === 'doc' ? <FileText size={14} className="text-blue-500" /> : <Table size={14} className="text-emerald-500" />}
+                                  </div>
+                                  <div>
+                                    <h4 className="text-xs text-zinc-200 line-clamp-1 group-hover:text-white transition-colors">{item.title}</h4>
+                                    <span className="text-[9px] font-mono text-zinc-600 uppercase">{new Date(item.date).toLocaleDateString()}</span>
+                                  </div>
+                                </div>
+                                <a href={item.link} target="_blank" rel="noopener noreferrer" className="p-1 text-zinc-600 hover:text-zinc-300">
+                                  <ExternalLink size={12} />
+                                </a>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-8 text-center text-zinc-700 font-mono text-[10px] uppercase italic">Nenhum arquivo gerado ainda.</div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  
-                  {loading ? (
-                    <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
-                      Sincronizando Calendário...
+
+                    <div className="p-6 border border-zinc-800 bg-zinc-900/40">
+                      <h3 className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
+                        <ShieldCheck size={14} /> Google Drive
+                      </h3>
+                      <p className="text-[10px] text-zinc-500 leading-relaxed mb-4 italic">
+                        Todos os seus resumos e transcrições são salvos automaticamente na pasta <span className="text-zinc-300">"VoxMeet AI"</span> no seu Drive.
+                      </p>
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-500/70">
+                        <CheckCircle2 size={12} />
+                        <span>Pasta Gerada Automaticamente</span>
+                      </div>
                     </div>
-                  ) : meetings.length > 0 ? (
-                    <div className={viewMode === 'list' ? 'flex flex-col' : ''}>
-                      {meetings.map(m => (
-                        <MeetingCard key={m.id} meeting={m} onJoin={setActiveMeeting} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
-                      Nenhuma reunião encontrada.
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>

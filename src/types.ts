@@ -16,4 +16,17 @@ export interface Meeting {
 
 export interface AuthStatus {
   authenticated: boolean;
+  user?: {
+    name: string;
+    email: string;
+    picture: string;
+  };
+}
+
+export interface HistoryItem {
+  id: string;
+  title: string;
+  date: string;
+  type: 'doc' | 'sheet';
+  link: string;
 }

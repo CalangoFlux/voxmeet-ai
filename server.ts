@@ -56,7 +56,11 @@ const getOAuthClient = () => {
 const SCOPES = [
   'https://www.googleapis.com/auth/calendar.readonly',
   'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/documents'
+  'https://www.googleapis.com/auth/drive.metadata.readonly',
+  'https://www.googleapis.com/auth/documents',
+  'https://www.googleapis.com/auth/spreadsheets',
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/userinfo.email'
 ];
 
 // Health Check
@@ -122,11 +126,32 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
-app.get("/api/auth/status", (req, res) => {
+app.get("/api/auth/status", async (req, res) => {
+  // @ts-ignore
+  const authenticated = !!(req.session && req.session.tokens);
+  let user = null;
+
+  if (authenticated) {
+    try {
+      const client = getOAuthClient();
+      // @ts-ignore
+      client.setCredentials(req.session.tokens);
+      const oauth2 = google.oauth2({ version: 'v2', auth: client });
+      const userInfo = await oauth2.userinfo.get();
+      user = {
+        name: userInfo.data.name,
+        email: userInfo.data.email,
+        picture: userInfo.data.picture
+      };
+    } catch (e) {
+      console.error("Failed to fetch user info:", e);
+    }
+  }
+
   res.json({ 
-    // @ts-ignore
-    authenticated: !!(req.session && req.session.tokens),
-    configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
+    authenticated,
+    configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    user
   });
 });
 
@@ -161,50 +186,129 @@ app.get("/api/meetings", async (req, res) => {
   }
 });
 
+// Drive & History API
+app.get("/api/history", async (req, res) => {
+  // @ts-ignore
+  if (!req.session || !req.session.tokens) return res.status(401).json({ error: "Not authenticated" });
+  
+  const client = getOAuthClient();
+  // @ts-ignore
+  client.setCredentials(req.session.tokens);
+  const drive = google.drive({ version: 'v3', auth: client });
+
+  try {
+    const response = await drive.files.list({
+      q: "mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.google-apps.spreadsheet'",
+      pageSize: 10,
+      fields: 'files(id, name, mimeType, webViewLink, createdTime)',
+      orderBy: 'createdTime desc'
+    });
+
+    const history = (response.data.files || []).map(file => ({
+      id: file.id,
+      title: file.name,
+      date: file.createdTime,
+      type: file.mimeType === 'application/vnd.google-apps.document' ? 'doc' : 'sheet',
+      link: file.webViewLink
+    }));
+
+    res.json(history);
+  } catch (error) {
+    console.error("Drive API Error:", error);
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
+
 // Summary API
 app.post("/api/summary", async (req, res) => {
   // @ts-ignore
   if (!req.session || !req.session.tokens) return res.status(401).json({ error: "Not authenticated" });
   
-  const { title, content } = req.body;
+  const { title, content, type = 'doc' } = req.body;
   if (!title || !content) return res.status(400).json({ error: "Missing title or content" });
 
   const client = getOAuthClient();
   // @ts-ignore
   client.setCredentials(req.session.tokens);
   
-  const docs = google.docs({ version: 'v1', auth: client });
+  const drive = google.drive({ version: 'v3', auth: client });
 
   try {
-    const doc = await docs.documents.create({
-      requestBody: { title: `VoxMeet: ${title}` }
-    });
-    
-    await docs.documents.batchUpdate({
-      documentId: doc.data.documentId!,
-      requestBody: {
-        requests: [
-          {
-            insertText: {
-              location: { index: 1 },
-              text: `VOXMEET MEETING SUMMARY\n========================\n\n${content}`
-            }
-          },
-          {
-            updateTextStyle: {
-              range: { startIndex: 1, endIndex: 25 },
-              textStyle: { bold: true, fontSize: { magnitude: 18, unit: 'PT' } },
-              fields: 'bold,fontSize'
-            }
-          }
-        ]
-      }
+    // 1. Find or Create VoxMeet Folder
+    let folderId = '';
+    const folderSearch = await drive.files.list({
+      q: "name='VoxMeet AI' and mimeType='application/vnd.google-apps.folder' and trashed=false",
+      fields: 'files(id)'
     });
 
-    res.json({ success: true, docId: doc.data.documentId });
+    if (folderSearch.data.files && folderSearch.data.files.length > 0) {
+      folderId = folderSearch.data.files[0].id!;
+    } else {
+      const folder = await drive.files.create({
+        requestBody: {
+          name: 'VoxMeet AI',
+          mimeType: 'application/vnd.google-apps.folder'
+        },
+        fields: 'id'
+      });
+      folderId = folder.data.id!;
+    }
+
+    if (type === 'sheet') {
+      const sheets = google.sheets({ version: 'v4', auth: client });
+      const spreadsheet = await drive.files.create({
+        requestBody: {
+          name: `VoxMeet: ${title}`,
+          mimeType: 'application/vnd.google-apps.spreadsheet',
+          parents: [folderId]
+        },
+        fields: 'id'
+      });
+
+      const spreadsheetId = spreadsheet.data.id!;
+      
+      // Add content to sheet
+      const lines = content.split('\n').map((line: string) => [line]);
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: 'A1',
+        valueInputOption: 'RAW',
+        requestBody: { values: [['VOXMEET MEETING SUMMARY'], [''], ...lines] }
+      });
+
+      return res.json({ success: true, id: spreadsheetId, type: 'sheet' });
+    } else {
+      const docs = google.docs({ version: 'v1', auth: client });
+      const doc = await drive.files.create({
+        requestBody: {
+          name: `VoxMeet: ${title}`,
+          mimeType: 'application/vnd.google-apps.document',
+          parents: [folderId]
+        },
+        fields: 'id'
+      });
+      
+      const documentId = doc.data.id!;
+
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [
+            {
+              insertText: {
+                location: { index: 1 },
+                text: `VOXMEET MEETING SUMMARY\n========================\n\n${content}`
+              }
+            }
+          ]
+        }
+      });
+
+      return res.json({ success: true, id: documentId, type: 'doc' });
+    }
   } catch (error) {
-    console.error("Docs API Error:", error);
-    res.status(500).json({ error: "Failed to save summary to Google Docs" });
+    console.error("API Error:", error);
+    res.status(500).json({ error: "Failed to save to Google Drive" });
   }
 });
 
