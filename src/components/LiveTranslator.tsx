@@ -33,16 +33,16 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const session = await ai.live.connect({
-        model: "gemini-2.5-flash-native-audio-preview-12-2025",
+        model: "gemini-3.1-flash-live-preview",
         config: {
           responseModalities: [Modality.AUDIO],
-          systemInstruction: `You are a professional real-time meeting translator. 
-          Your goal is to provide seamless translation between Portuguese and English.
-          - If the speaker is speaking Portuguese, translate to English.
-          - If the speaker is speaking English, translate to Portuguese.
-          - Provide ONLY the translation in the model turn.
-          - If the audio is unclear, provide the best possible interpretation.
-          - Maintain a professional and helpful tone.`,
+          systemInstruction: `Você é um tradutor profissional de reuniões em tempo real. 
+          Seu objetivo é fornecer tradução perfeita entre Português e Inglês.
+          - Se o falante estiver falando Português, traduza para Inglês.
+          - Se o falante estiver falando Inglês, traduza para Português.
+          - Forneça APENAS a tradução no turno do modelo.
+          - Se o áudio não estiver claro, forneça a melhor interpretação possível.
+          - Mantenha um tom profissional e prestativo.`,
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
           },

@@ -2,23 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { Meeting, AuthStatus } from '../types';
 import { MeetingCard } from './MeetingCard';
 import { LiveTranslator } from './LiveTranslator';
-import { LayoutGrid, List, Settings, LogOut, ShieldCheck, RefreshCw } from 'lucide-react';
+import { LayoutGrid, List, Settings, LogOut, ShieldCheck, RefreshCw, Info, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const Dashboard: React.FC = () => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeMeeting, setActiveMeeting] = useState<Meeting | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus & { configured?: boolean }>({ authenticated: false, configured: true });
+  const [showLicense, setShowLicense] = useState(false);
 
   const fetchAuthStatus = async () => {
     try {
       const res = await fetch('/api/auth/status');
-      if (!res.ok) throw new Error("Network response was not ok");
+      if (!res.ok) throw new Error(`Status check failed: ${res.status}`);
       const data = await res.json();
       setAuthStatus(data);
       if (data.authenticated) fetchMeetings();
     } catch (err) {
-      console.error("Failed to fetch auth status:", err);
+      console.error("Error fetching auth status:", err);
     } finally {
       setLoading(false);
     }
@@ -33,7 +35,7 @@ export const Dashboard: React.FC = () => {
         setMeetings(data);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching meetings:", err);
     } finally {
       setLoading(false);
     }
@@ -43,7 +45,6 @@ export const Dashboard: React.FC = () => {
     fetchAuthStatus();
     
     const handleMessage = (event: MessageEvent) => {
-      console.log("DEBUG: Message received in Dashboard:", event.data);
       if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
         fetchAuthStatus();
       }
@@ -51,12 +52,11 @@ export const Dashboard: React.FC = () => {
     
     window.addEventListener('message', handleMessage);
     
-    // Fallback: Poll for auth status every 5 seconds if not authenticated
     const interval = setInterval(() => {
       if (!authStatus.authenticated) {
         fetchAuthStatus();
       }
-    }, 5000);
+    }, 10000); // 10s polling
 
     return () => {
       window.removeEventListener('message', handleMessage);
@@ -67,14 +67,14 @@ export const Dashboard: React.FC = () => {
   const handleConnect = async () => {
     const popup = window.open('about:blank', 'google_auth', 'width=600,height=700');
     if (!popup) {
-      alert("Pop-up blocked! Please allow popups for this site to connect your Google account.");
+      alert("Pop-up bloqueado! Por favor, autorize pop-ups para este site para conectar sua conta Google.");
       return;
     }
     
     popup.document.write(`
       <div style="font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #000; color: #fff;">
         <div style="width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <p style="margin-top: 20px; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;">Connecting to Google...</p>
+        <p style="margin-top: 20px; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; opacity: 0.7;">Conectando ao Google...</p>
         <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
       </div>
     `);
@@ -83,14 +83,7 @@ export const Dashboard: React.FC = () => {
       const res = await fetch('/api/auth/url');
       if (!res.ok) {
         const text = await res.text();
-        let errorMessage = "Failed to get auth URL";
-        try {
-          const errorData = JSON.parse(text);
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          errorMessage = `Server Error (${res.status}): ${text.substring(0, 100)}`;
-        }
-        throw new Error(errorMessage);
+        throw new Error(`Auth URL error (${res.status}): ${text.substring(0, 50)}`);
       }
       
       const { url } = await res.json();
@@ -98,14 +91,14 @@ export const Dashboard: React.FC = () => {
     } catch (err) {
       console.error("Auth error:", err);
       popup.close();
-      alert(`Connection Error: ${err instanceof Error ? err.message : "Could not reach the server"}. Please check your internet connection and try again.`);
+      alert(`Erro de Conexão: ${err instanceof Error ? err.message : "Não foi possível conectar ao servidor"}.`);
     }
   };
 
   if (!authStatus.authenticated) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6">
-        <div className="max-w-md w-full border border-zinc-800 p-8 bg-zinc-900/20 backdrop-blur-sm">
+      <div className="flex flex-col items-center justify-center p-6 w-full h-full">
+        <div className="max-w-md w-full border border-zinc-800 p-8 bg-zinc-900/20">
           <div className="mb-8">
             <div className="h-10 w-10 bg-zinc-100 flex items-center justify-center mb-4">
               <ShieldCheck className="text-zinc-950" />
@@ -126,14 +119,14 @@ export const Dashboard: React.FC = () => {
           <button 
             onClick={handleConnect}
             disabled={!authStatus.configured}
-            className="w-full py-3 bg-zinc-100 text-zinc-950 font-mono uppercase tracking-widest text-xs hover:bg-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+            className="w-full py-3 bg-zinc-100 text-zinc-950 font-mono uppercase tracking-widest text-xs hover:bg-white transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer relative z-50"
           >
             Autorizar Acesso ao Google
           </button>
 
           <button 
             onClick={() => fetchAuthStatus()}
-            className="w-full mt-3 py-2 border border-zinc-800 text-zinc-500 font-mono uppercase tracking-widest text-[10px] hover:text-zinc-300 hover:border-zinc-600 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full mt-3 py-2 border border-zinc-800 text-zinc-500 font-mono uppercase tracking-widest text-[10px] hover:text-zinc-300 hover:border-zinc-600 transition-all flex items-center justify-center gap-2 cursor-pointer relative z-50"
           >
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
             Verificar Status da Conexão
@@ -145,6 +138,65 @@ export const Dashboard: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="mt-12 text-center">
+          <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-2">
+            Desenvolvido por <span className="text-zinc-400">CalangoFlux</span>
+          </p>
+          <p className="text-[9px] font-mono text-zinc-700 uppercase tracking-tighter">
+            Licença MIT © 2026 • <button onClick={() => setShowLicense(true)} className="hover:text-zinc-500 underline cursor-pointer">Ver Termos</button>
+          </p>
+        </footer>
+
+        {/* License Modal */}
+        <AnimatePresence>
+          {showLicense && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+            >
+              <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="max-w-2xl w-full bg-zinc-900 border border-zinc-800 p-8 max-h-[80vh] overflow-y-auto"
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-sm font-mono uppercase tracking-widest text-zinc-100 flex items-center gap-2">
+                    <Info size={14} /> Licença MIT
+                  </h2>
+                  <button onClick={() => setShowLicense(false)} className="text-zinc-500 hover:text-white cursor-pointer"><X size={18} /></button>
+                </div>
+                <pre className="text-[10px] font-mono text-zinc-400 whitespace-pre-wrap leading-relaxed">
+{`MIT License
+
+Copyright (c) 2026 CalangoFlux
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`}
+                </pre>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -224,6 +276,65 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Footer */}
+            <footer className="py-6 border-t border-zinc-800 text-center">
+              <p className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest mb-1">
+                Desenvolvido por <span className="text-zinc-400">CalangoFlux</span>
+              </p>
+              <p className="text-[9px] font-mono text-zinc-700 uppercase tracking-tighter">
+                Licença MIT © 2026 • <button onClick={() => setShowLicense(true)} className="hover:text-zinc-500 underline cursor-pointer">Ver Termos</button>
+              </p>
+            </footer>
+
+            {/* License Modal */}
+            <AnimatePresence>
+              {showLicense && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+                >
+                  <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className="max-w-2xl w-full bg-zinc-900 border border-zinc-800 p-8 max-h-[80vh] overflow-y-auto"
+                  >
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-sm font-mono uppercase tracking-widest text-zinc-100 flex items-center gap-2">
+                        <Info size={14} /> Licença MIT
+                      </h2>
+                      <button onClick={() => setShowLicense(false)} className="text-zinc-500 hover:text-white cursor-pointer"><X size={18} /></button>
+                    </div>
+                    <pre className="text-[10px] font-mono text-zinc-400 whitespace-pre-wrap leading-relaxed">
+{`MIT License
+
+Copyright (c) 2026 CalangoFlux
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`}
+                    </pre>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </>
         )}
       </main>

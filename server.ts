@@ -49,7 +49,6 @@ const getOAuthClient = () => {
   }
 
   const redirectUri = `${appUrl.replace(/\/$/, '')}/auth/callback`;
-  console.log("DEBUG: Generated Redirect URI:", redirectUri);
 
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 };
@@ -85,7 +84,7 @@ app.get("/api/auth/url", (req, res) => {
     res.json({ url });
   } catch (error) {
     console.error("Error generating Auth URL:", error);
-    res.status(500).json({ error: "Failed to generate Google Auth URL" });
+    res.status(500).json({ error: "Failed to generate Google Auth URL", details: error instanceof Error ? error.message : String(error) });
   }
 });
 
@@ -111,8 +110,8 @@ app.get("/auth/callback", async (req, res) => {
             }
           </script>
           <div style="text-align: center;">
-            <h2>Authenticated Successfully!</h2>
-            <p>Closing this window...</p>
+            <h2 style="font-weight: 300; letter-spacing: 0.05em; text-transform: uppercase;">Autenticado com Sucesso!</h2>
+            <p style="opacity: 0.6; font-size: 12px;">Fechando esta janela...</p>
           </div>
         </body>
       </html>
