@@ -11,6 +11,8 @@ export const Dashboard: React.FC = () => {
   const [activeMeeting, setActiveMeeting] = useState<Meeting | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus & { configured?: boolean }>({ authenticated: false, configured: true });
   const [showLicense, setShowLicense] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const fetchAuthStatus = async () => {
     try {
@@ -92,6 +94,16 @@ export const Dashboard: React.FC = () => {
       console.error("Auth error:", err);
       popup.close();
       alert(`Erro de Conexão: ${err instanceof Error ? err.message : "Não foi possível conectar ao servidor"}.`);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setAuthStatus({ authenticated: false, configured: true });
+      setMeetings([]);
+    } catch (err) {
+      console.error("Logout error:", err);
     }
   };
 
@@ -204,15 +216,39 @@ SOFTWARE.`}
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-300 font-sans flex">
       {/* Sidebar */}
-      <aside className="w-16 border-r border-zinc-800 flex flex-col items-center py-6 gap-8">
+      <aside className="w-16 border-r border-zinc-800 flex flex-col items-center py-6 gap-8 sticky top-0 h-screen z-[60] bg-zinc-950 shrink-0">
         <div className="h-8 w-8 bg-zinc-100 flex items-center justify-center font-serif italic text-zinc-950 font-bold">V</div>
         <nav className="flex flex-col gap-6">
-          <button className="p-2 text-zinc-100 bg-zinc-900 border border-zinc-800 cursor-pointer"><LayoutGrid size={20} /></button>
-          <button className="p-2 text-zinc-500 hover:text-zinc-300 cursor-pointer"><List size={20} /></button>
-          <button className="p-2 text-zinc-500 hover:text-zinc-300 cursor-pointer"><Settings size={20} /></button>
+          <button 
+            onClick={() => setViewMode('grid')}
+            title="Visualização em Grade"
+            className={`p-2 transition-colors cursor-pointer pointer-events-auto ${viewMode === 'grid' ? 'text-zinc-100 bg-zinc-900 border border-zinc-800' : 'text-zinc-500 hover:text-zinc-300'}`}
+          >
+            <LayoutGrid size={20} />
+          </button>
+          <button 
+            onClick={() => setViewMode('list')}
+            title="Visualização em Lista"
+            className={`p-2 transition-colors cursor-pointer pointer-events-auto ${viewMode === 'list' ? 'text-zinc-100 bg-zinc-900 border border-zinc-800' : 'text-zinc-500 hover:text-zinc-300'}`}
+          >
+            <List size={20} />
+          </button>
+          <button 
+            onClick={() => setShowSettings(true)}
+            title="Configurações"
+            className="p-2 text-zinc-500 hover:text-zinc-300 cursor-pointer transition-colors pointer-events-auto"
+          >
+            <Settings size={20} />
+          </button>
         </nav>
         <div className="mt-auto">
-          <button className="p-2 text-zinc-600 hover:text-zinc-400 cursor-pointer"><LogOut size={20} /></button>
+          <button 
+            onClick={handleLogout}
+            title="Sair"
+            className="p-2 text-zinc-600 hover:text-zinc-400 cursor-pointer transition-colors pointer-events-auto"
+          >
+            <LogOut size={20} />
+          </button>
         </div>
       </aside>
 
@@ -253,21 +289,29 @@ SOFTWARE.`}
                 </div>
 
                 <div className="border border-zinc-800 bg-zinc-900/10">
-                  <div className="grid grid-cols-[40px_1.5fr_1fr_1fr] p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-                    <div />
-                    <div>Detalhes do Evento</div>
-                    <div>Horário</div>
-                    <div className="text-right">Ações</div>
-                  </div>
+                  {viewMode === 'grid' ? (
+                    <div className="grid grid-cols-[40px_1.5fr_1fr_1fr] p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+                      <div />
+                      <div>Detalhes do Evento</div>
+                      <div>Horário</div>
+                      <div className="text-right">Ações</div>
+                    </div>
+                  ) : (
+                    <div className="p-4 border-b border-zinc-800 text-[10px] font-mono uppercase tracking-widest text-zinc-600">
+                      Modo Lista
+                    </div>
+                  )}
                   
                   {loading ? (
                     <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
                       Sincronizando Calendário...
                     </div>
                   ) : meetings.length > 0 ? (
-                    meetings.map(m => (
-                      <MeetingCard key={m.id} meeting={m} onJoin={setActiveMeeting} />
-                    ))
+                    <div className={viewMode === 'list' ? 'flex flex-col' : ''}>
+                      {meetings.map(m => (
+                        <MeetingCard key={m.id} meeting={m} onJoin={setActiveMeeting} />
+                      ))}
+                    </div>
                   ) : (
                     <div className="p-12 text-center text-zinc-600 font-mono text-xs uppercase tracking-widest">
                       Nenhuma reunião encontrada.
@@ -286,6 +330,60 @@ SOFTWARE.`}
                 Licença MIT © 2026 • <button onClick={() => setShowLicense(true)} className="hover:text-zinc-500 underline cursor-pointer">Ver Termos</button>
               </p>
             </footer>
+
+            {/* Settings Modal */}
+            <AnimatePresence>
+              {showSettings && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6"
+                >
+                  <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.95, opacity: 0 }}
+                    className="max-w-md w-full bg-zinc-900 border border-zinc-800 p-8"
+                  >
+                    <div className="flex justify-between items-center mb-8">
+                      <h2 className="text-sm font-mono uppercase tracking-widest text-zinc-100 flex items-center gap-2">
+                        <Settings size={14} /> Configurações
+                      </h2>
+                      <button onClick={() => setShowSettings(false)} className="text-zinc-500 hover:text-white cursor-pointer"><X size={18} /></button>
+                    </div>
+                    
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">Idioma do Sistema</label>
+                        <select className="w-full bg-zinc-950 border border-zinc-800 p-3 text-xs text-zinc-300 focus:outline-none focus:border-zinc-600">
+                          <option>Português (Brasil)</option>
+                          <option>English (US)</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase tracking-widest text-zinc-500 mb-2">Voz do Assistente</label>
+                        <select className="w-full bg-zinc-950 border border-zinc-800 p-3 text-xs text-zinc-300 focus:outline-none focus:border-zinc-600">
+                          <option>Zephyr (Padrão)</option>
+                          <option>Puck</option>
+                          <option>Charon</option>
+                        </select>
+                      </div>
+
+                      <div className="pt-4 border-t border-zinc-800">
+                        <button 
+                          onClick={() => setShowSettings(false)}
+                          className="w-full py-3 bg-zinc-100 text-zinc-950 font-mono uppercase tracking-widest text-xs hover:bg-white transition-all cursor-pointer"
+                        >
+                          Salvar Alterações
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* License Modal */}
             <AnimatePresence>

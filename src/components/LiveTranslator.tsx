@@ -57,7 +57,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
             if (message.serverContent?.modelTurn?.parts?.[0]?.text) {
               const text = message.serverContent.modelTurn.parts[0].text;
               setTranscript(prev => [{
-                text: "Audio Input...",
+                text: "Entrada de Áudio...",
                 translation: text,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               }, ...prev]);
@@ -65,7 +65,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
           },
           onerror: (err) => {
             console.error("Live API Error:", err);
-            setError("Connection error. Please check your API key and network.");
+            setError("Erro de conexão. Verifique sua chave de API e rede.");
             stopSession();
           },
           onclose: () => {
@@ -77,7 +77,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
       sessionRef.current = session;
     } catch (err) {
       console.error(err);
-      setError("Failed to connect to Gemini Live API.");
+      setError("Falha ao conectar à API Gemini Live.");
       setStatus('idle');
     }
   };
@@ -126,7 +126,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
       processor.connect(audioContext.destination);
     } catch (err) {
       console.error("Mic error:", err);
-      setError("Microphone access denied. Please check browser permissions.");
+      setError("Acesso ao microfone negado. Verifique as permissões do navegador.");
     }
   };
 
@@ -142,10 +142,10 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
   const saveSummary = async () => {
     setStatus('saving');
     const content = `
-      MEETING SUMMARY: ${meeting.summary}
-      DATE: ${new Date().toLocaleString()}
+      RESUMO DA REUNIÃO: ${meeting.summary}
+      DATA: ${new Date().toLocaleString('pt-BR')}
       
-      TRANSCRIPT & TRANSLATION:
+      TRANSCRIÇÃO E TRADUÇÃO:
       ${transcript.map(t => `[${t.timestamp}] ${t.translation}`).join('\n')}
     `;
 
@@ -156,7 +156,7 @@ export const LiveTranslator: React.FC<LiveTranslatorProps> = ({ meeting, onClose
         body: JSON.stringify({ title: meeting.summary, content })
       });
       if (res.ok) {
-        alert("Summary saved to Google Drive!");
+        alert("Resumo salvo no Google Drive!");
       }
     } catch (err) {
       console.error(err);

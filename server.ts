@@ -130,6 +130,12 @@ app.get("/api/auth/status", (req, res) => {
   });
 });
 
+app.post("/api/auth/logout", (req, res) => {
+  // @ts-ignore
+  req.session = null;
+  res.json({ success: true });
+});
+
 // Calendar API
 app.get("/api/meetings", async (req, res) => {
   // @ts-ignore
@@ -202,7 +208,7 @@ app.post("/api/summary", async (req, res) => {
   }
 });
 
-// Vite Setup for Development
+// Vite Setup for Development and Production
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
@@ -211,17 +217,19 @@ async function startServer() {
       appType: "spa",
     });
     app.use(vite.middlewares);
-    
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`VoxMeet Dev Server running on http://localhost:${PORT}`);
+  } else {
+    const distPath = path.resolve(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`VoxMeet Server running on http://localhost:${PORT}`);
+  });
 }
 
-// Export for Vercel
+startServer();
+
 export default app;
-
-// Only start the server if not running as a serverless function
-if (process.env.NODE_ENV !== "production") {
-  startServer();
-}

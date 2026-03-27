@@ -11,7 +11,7 @@ interface MeetingCardProps {
 export const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onJoin }) => {
   const startTime = meeting.start.dateTime 
     ? new Date(meeting.start.dateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : 'All Day';
+    : 'O Dia Todo';
 
   return (
     <div className="group flex flex-col border-b border-zinc-800 p-4 hover:bg-zinc-900/50 transition-all cursor-default">
@@ -19,7 +19,7 @@ export const MeetingCard: React.FC<MeetingCardProps> = ({ meeting, onJoin }) => 
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">
-              {meeting.start.dateTime ? new Date(meeting.start.dateTime).toLocaleDateString() : 'Today'}
+              {meeting.start.dateTime ? new Date(meeting.start.dateTime).toLocaleDateString() : 'Hoje'}
             </span>
             <span className="h-1 w-1 rounded-full bg-zinc-700" />
             <span className="text-[10px] font-mono text-zinc-400 flex items-center gap-1">
